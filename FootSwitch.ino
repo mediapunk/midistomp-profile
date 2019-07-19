@@ -89,45 +89,69 @@ class FootSwitch {
     }
 };
 
+class Snap {
+  public:
+
+    FootSwitch fs4;
+    FootSwitch fs5;
+    FootSwitch fs6;
+
+    Snap() : fs4(MIDI_CC, FS4),
+             fs5(MIDI_CC, FS5),
+             fs6(MIDI_CC, FS6) {}
+
+    void resetFootSwitches() {
+      fs4 = FootSwitch(MIDI_CC, FS4);
+      fs5 = FootSwitch(MIDI_CC, FS5);
+      fs6 = FootSwitch(MIDI_CC, FS6);
+    }
+};
+
 class Preset {
-  uint8_t preset, snap;
+  uint8_t presetNum, snapNum;
+  Snap    snap_list[3];
 
   public:
+    Snap *snap;
+
     Preset() {
-      preset = 0;
-      snap   = 0;
+      presetNum = 0;
+      snapNum   = 0;
     }
 
     void loadPreset() {
       Serial.write(MIDI_PC);
-      Serial.write(preset);
+      Serial.write(presetNum);
     }
-    void set(uint8_t preset) {
-      if (preset > 126) preset = 126;
-      if (preset < 0)   preset = 0;
-      this->preset = preset;
+    void set(uint8_t presetNum) {
+      if (presetNum > 126) presetNum = 126;
+      this->presetNum = presetNum;
       loadPreset();
+      resetSnaps();
       setSnap(0);  // When switching presets, always start on snap 0
     }
-    void    next()     { if (preset < 126) set(preset+1); }
-    void    previous() { if (preset > 0)   set(preset-1); }
-    uint8_t get()      { return preset; }
+    void    next()     { if (presetNum < 126) set(presetNum+1); }
+    void    previous() { if (presetNum > 0)   set(presetNum-1); }
+    uint8_t get()      { return presetNum; }
 
 
+    void resetSnaps() {
+      for (int i=0; i<3; i++) snap_list[i].resetFootSwitches();
+    }
     void loadSnap() {
       Serial.write(MIDI_CC);
       Serial.write(MIDI_NOTE_SNAP);
-      Serial.write(snap);
+      Serial.write(snapNum);
     }
-    void setSnap(uint8_t snap) {
-      if (snap > 2) snap = 2;
-      if (snap < 0) snap = 0;
-      this->snap = snap;
+    void setSnap(uint8_t snapNum) {
+      if (snapNum > 2) snapNum = 2;
+      this->snapNum = snapNum;
+      snap          = &snap_list[snapNum];
       loadSnap();
     }
-    void    nextSnap()     { if (snap < 2) setSnap(snap+1); }
-    void    previousSnap() { if (snap > 0) setSnap(snap-1); }
-    uint8_t getSnap()      { return snap; }
+    void    nextSnap()     { if (snapNum < 2) setSnap(snapNum+1); }
+    void    previousSnap() { if (snapNum > 0) setSnap(snapNum-1); }
+    uint8_t getSnap()      { return snapNum; }
 };
 
 void sendMidi(uint8_t command, uint8_t note, uint8_t velocity) {
@@ -143,7 +167,7 @@ void sendMidi(uint8_t command, uint8_t note) {
 
 
 // -- VARIABLES --
-uint8_t event, initialize, snap;
+uint8_t event, initialize;
 long    timer;
 
 Switch lsw(PIN_LEFT);
@@ -156,9 +180,9 @@ LED_RGB led3(8);
 
 Preset preset;
 
-FootSwitch fs4(MIDI_CC, FS4);
-FootSwitch fs5(MIDI_CC, FS5);
-FootSwitch fs6(MIDI_CC, FS6);
+/*FootSwitch fs4(MIDI_CC, FS4);*/
+/*FootSwitch fs5(MIDI_CC, FS5);*/
+/*FootSwitch fs6(MIDI_CC, FS6);*/
 // -- END VARIABLES --
 
 
@@ -208,7 +232,6 @@ void loop() {
       }
       else {
         if (lsw.longPressed() || rsw.longPressed() || csw.longPressed()) {
-          snap = 0;
           sendMidi(MIDI_CC, FS_MODE, FS_MODE_STOMP);
           preset.set(1);
           preset.set(0);
@@ -238,23 +261,23 @@ void loop() {
 
     case MENU_MAIN:
       if (!initialize && led1.isComplete()) {
-        led1.set(fs4.get() ? 255 : 0,0,0, 200);
-        led2.set(fs5.get() ? 255 : 0,0,0, 200);
-        led3.set(fs6.get() ? 255 : 0,0,0, 200);
+        led1.set(preset.snap->fs4.get() ? 255 : 0,0,0, 200);
+        led2.set(preset.snap->fs5.get() ? 255 : 0,0,0, 200);
+        led3.set(preset.snap->fs6.get() ? 255 : 0,0,0, 200);
         initialize = TRUE;
       }
       else {
         if (lsw.pressed()) {
-          fs4.toggle();
-          led1.set(fs4.get() ? 255 : 0,0,0, 50);
+          preset.snap->fs4.toggle();
+          led1.set(preset.snap->fs4.get() ? 255 : 0,0,0, 50);
         }
         if (csw.pressed()) {
-          fs5.toggle();
-          led2.set(fs5.get() ? 255 : 0,0,0, 50);
+          preset.snap->fs5.toggle();
+          led2.set(preset.snap->fs5.get() ? 255 : 0,0,0, 50);
         }
         if (rsw.pressed()) {
-          fs6.toggle();
-          led3.set(fs6.get() ? 255 : 0,0,0, 50);
+          preset.snap->fs6.toggle();
+          led3.set(preset.snap->fs6.get() ? 255 : 0,0,0, 50);
         }
 
         if (lsw.longPressed()) {
@@ -271,25 +294,38 @@ void loop() {
 
     case MENU_HIPBOX:
       if (!initialize) {
-        led1.set(255,20,0, 200);
-        led2.set(255,20,0, 200);
-        led3.set(255,20,0, 200);
+        if (preset.get() > 41) {
+          led1.set(50,0,0, 200);
+          led2.set(50,0,0, 200);
+          led3.set(50,0,0, 200);
+        }
+        else {
+          led1.set(255,20,0, 200);
+          led2.set(255,20,0, 200);
+          led3.set(255,20,0, 200);
+        }
         initialize = TRUE;
       }
       else {
-        if (lsw.pressed()) {
-          sendMidi(MIDI_NOTE_ON, (preset.get()*3), 127);
-          led1.blink(2, 50);
+        if (preset.get() <= 41) {
+          if (lsw.pressed()) {
+            sendMidi(MIDI_NOTE_ON, (preset.get()*3), 127);
+            led1.blink(2, 50);
+          }
+          if (csw.pressed()) {
+            sendMidi(MIDI_NOTE_ON, ((preset.get()*3)+1), 127);
+            led2.blink(2, 50);
+          }
+          if (rsw.pressed()) {
+            sendMidi(MIDI_NOTE_ON, ((preset.get()*3)+2), 127);
+            led3.blink(2, 50);
+          }
         }
-        if (csw.pressed()) {
-          sendMidi(MIDI_NOTE_ON, ((preset.get()*3)+1), 127);
-          led2.blink(2, 50);
+        if (csw.longPressed()) {
+          preset.resetSnaps();
+          jumpTo(MENU_PRE);
         }
-        if (rsw.pressed()) {
-          sendMidi(MIDI_NOTE_ON, ((preset.get()*3)+2), 127);
-          led3.blink(2, 50);
-        }
-        if (lsw.longPressed() || rsw.longPressed() || csw.longPressed()) {
+        if (rsw.longPressed()) {
           jumpTo(MENU_MAIN);
         }
       }
@@ -304,27 +340,26 @@ void loop() {
       }
       else {
         if (lsw.pressed()) {
-          preset.previous();
-          fs4.set(false);
-          fs5.set(false);
-          fs6.set(false);
+          if (preset.get() == 0) preset.set(125);
+          else preset.previous();
           led1.blink(2, 50);
         }
+        if (csw.pressed()) {
+          jumpTo(MENU_MAIN);
+        }
         if (rsw.pressed()) {
-          preset.next();
-          fs4.set(false);
-          fs5.set(false);
-          fs6.set(false);
+          if (preset.get() == 125) preset.set(0);
+          else preset.next();
           led3.blink(2, 50);
         }
-        if (csw.longPressed()) {
-          fs4.set(false);
-          fs5.set(false);
-          fs6.set(false);
-          jumpTo(MENU_PRE);
+
+        if (lsw.longPressed()) {
+          preset.set(preset.get() > 20 ? preset.get()-20 : 0);
+          led1.blink(2, 100);
         }
-        if (lsw.longPressed() || rsw.longPressed()) {
-          jumpTo(MENU_MAIN);
+        if (rsw.longPressed()) {
+          preset.set(preset.get() < 105 ? preset.get()+20 : 125);
+          led3.blink(2, 100);
         }
       }
       break;
@@ -344,9 +379,6 @@ void loop() {
           if (preset.getSnap() == 0) jumpTo(MENU_MAIN);
           else {
             preset.setSnap(0);
-            fs4.set(false);
-            fs5.set(false);
-            fs6.set(false);
             jumpTo(MENU_MAIN);
           }
         }
@@ -354,9 +386,6 @@ void loop() {
           if (preset.getSnap() == 1) jumpTo(MENU_MAIN);
           else {
             preset.setSnap(1);
-            fs4.set(false);
-            fs5.set(false);
-            fs6.set(false);
             jumpTo(MENU_MAIN);
           }
         }
@@ -364,11 +393,11 @@ void loop() {
           if (preset.getSnap() == 2) jumpTo(MENU_MAIN);
           else {
             preset.setSnap(2);
-            fs4.set(false);
-            fs5.set(false);
-            fs6.set(false);
             jumpTo(MENU_MAIN);
           }
+        }
+        if (rsw.longPressed()) {
+          jumpTo(MENU_MAIN);
         }
       }
       break;
