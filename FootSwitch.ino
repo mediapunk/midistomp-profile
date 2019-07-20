@@ -59,28 +59,21 @@
 class FootSwitch {
   bool    state;
   uint8_t note;
-  uint8_t command;
 
   public:
-    FootSwitch(uint8_t command, uint8_t note) {
-      state         = false;
-      this->command = command;
-      this->note    = note;
+    FootSwitch(uint8_t note) {
+      state      = false;
+      this->note = note;
     }
 
     void send() {
-      Serial.write(command);
+      Serial.write(MIDI_CC);
       Serial.write(note);
       Serial.write(state ? 127 : 0);
     }
 
-    bool get() {
-      return state;
-    }
-
-    void set(bool state) {
-      this->state = state;
-    }
+    bool get()           { return state; }
+    void set(bool state) { this->state = state; }
 
     void toggle() {
       if (state) set(false);
@@ -89,22 +82,24 @@ class FootSwitch {
     }
 };
 
-class Snap {
-  public:
+FootSwitch fs4(FS4);
+FootSwitch fs5(FS5);
+FootSwitch fs6(FS6);
 
-    FootSwitch fs4;
-    FootSwitch fs5;
-    FootSwitch fs6;
+struct Snap {
+  bool _fs4 = FALSE, _fs5 = FALSE, _fs6 = FALSE;
 
-    Snap() : fs4(MIDI_CC, FS4),
-             fs5(MIDI_CC, FS5),
-             fs6(MIDI_CC, FS6) {}
+  void resetFootSwitches() {
+    _fs4 = FALSE;
+    _fs5 = FALSE;
+    _fs6 = FALSE;
+  }
 
-    void resetFootSwitches() {
-      fs4 = FootSwitch(MIDI_CC, FS4);
-      fs5 = FootSwitch(MIDI_CC, FS5);
-      fs6 = FootSwitch(MIDI_CC, FS6);
-    }
+  void setSwitches() {
+    fs4.set(_fs4);
+    fs5.set(_fs5);
+    fs6.set(_fs6);
+  }
 };
 
 class Preset {
@@ -112,11 +107,12 @@ class Preset {
   Snap    snap_list[3];
 
   public:
-    Snap *snap;
+    Snap *snap_p;
 
     Preset() {
       presetNum = 0;
       snapNum   = 0;
+      snap_p    = &snap_list[snapNum];
     }
 
     void loadPreset() {
@@ -124,11 +120,10 @@ class Preset {
       Serial.write(presetNum);
     }
     void set(uint8_t presetNum) {
-      if (presetNum > 126) presetNum = 126;
       this->presetNum = presetNum;
       loadPreset();
       resetSnaps();
-      setSnap(0);  // When switching presets, always start on snap 0
+      snapNum = 0;
     }
     void    next()     { if (presetNum < 126) set(presetNum+1); }
     void    previous() { if (presetNum > 0)   set(presetNum-1); }
@@ -136,6 +131,9 @@ class Preset {
 
 
     void resetSnaps() {
+      fs4.set(FALSE);
+      fs5.set(FALSE);
+      fs6.set(FALSE);
       for (int i=0; i<3; i++) snap_list[i].resetFootSwitches();
     }
     void loadSnap() {
@@ -146,7 +144,8 @@ class Preset {
     void setSnap(uint8_t snapNum) {
       if (snapNum > 2) snapNum = 2;
       this->snapNum = snapNum;
-      snap          = &snap_list[snapNum];
+      snap_p = &snap_list[snapNum];
+      snap_p->setSwitches();
       loadSnap();
     }
     void    nextSnap()     { if (snapNum < 2) setSnap(snapNum+1); }
@@ -179,10 +178,6 @@ LED_RGB led2(4);
 LED_RGB led3(8);
 
 Preset preset;
-
-/*FootSwitch fs4(MIDI_CC, FS4);*/
-/*FootSwitch fs5(MIDI_CC, FS5);*/
-/*FootSwitch fs6(MIDI_CC, FS6);*/
 // -- END VARIABLES --
 
 
@@ -261,23 +256,26 @@ void loop() {
 
     case MENU_MAIN:
       if (!initialize && led1.isComplete()) {
-        led1.set(preset.snap->fs4.get() ? 255 : 0,0,0, 200);
-        led2.set(preset.snap->fs5.get() ? 255 : 0,0,0, 200);
-        led3.set(preset.snap->fs6.get() ? 255 : 0,0,0, 200);
+        led1.set(fs4.get() ? 255 : 0,0,0, 200);
+        led2.set(fs5.get() ? 255 : 0,0,0, 200);
+        led3.set(fs6.get() ? 255 : 0,0,0, 200);
         initialize = TRUE;
       }
       else {
         if (lsw.pressed()) {
-          preset.snap->fs4.toggle();
-          led1.set(preset.snap->fs4.get() ? 255 : 0,0,0, 50);
+          fs4.toggle();
+          preset.snap_p->_fs4 = fs4.get();
+          led1.set(fs4.get() ? 255 : 0,0,0, 50);
         }
         if (csw.pressed()) {
-          preset.snap->fs5.toggle();
-          led2.set(preset.snap->fs5.get() ? 255 : 0,0,0, 50);
+          fs5.toggle();
+          preset.snap_p->_fs5 = fs5.get();
+          led2.set(fs5.get() ? 255 : 0,0,0, 50);
         }
         if (rsw.pressed()) {
-          preset.snap->fs6.toggle();
-          led3.set(preset.snap->fs6.get() ? 255 : 0,0,0, 50);
+          fs6.toggle();
+          preset.snap_p->_fs6 = fs6.get();
+          led3.set(fs6.get() ? 255 : 0,0,0, 50);
         }
 
         if (lsw.longPressed()) {
@@ -321,11 +319,11 @@ void loop() {
             led3.blink(2, 50);
           }
         }
-        if (csw.longPressed()) {
+        if (lsw.longPressed()) {
           preset.resetSnaps();
           jumpTo(MENU_PRE);
         }
-        if (rsw.longPressed()) {
+        if (csw.longPressed() || rsw.longPressed()) {
           jumpTo(MENU_MAIN);
         }
       }
