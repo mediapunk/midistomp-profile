@@ -3,19 +3,15 @@
 #ifndef LED_RGB_H
 #define LED_RGB_H
 
-#ifndef PIN_LATCH
 #define PIN_LATCH   9
-#endif
-#ifndef PIN_CLOCK
 #define PIN_CLOCK  12
-#endif
-#ifndef PIN_DATA
 #define PIN_DATA   11
-#endif
 
-#ifndef LED_FREQ
+#define LED_LEFT    0
+#define LED_CENTER  4
+#define LED_RIGHT   8
+
 #define LED_FREQ   35
-#endif
 
 #define CHECK_BIT(var,pos)   ((var) &  (1<<(pos)))
 #define TOGGLE_BIT(var,pos)  ((var) ^= (1<<(pos)))
