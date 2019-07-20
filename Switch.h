@@ -3,6 +3,9 @@
 
 #include <Arduino.h>
 
+#define DEBOUNCE_TIME    50 
+#define LONGPRESS_TIME  300
+
 class Switch {
   
   bool    isPressed, isActivated, isLongActivated,

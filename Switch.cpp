@@ -19,24 +19,24 @@ void Switch::run() {
     }
     else {
       /* 
-        If it has been over 30ms since button was
+        If it has been over so many ms since button was
         pressed down.  This is to prevent accidental
         triggering from poor quality switches.
       */
       if (!isActivated) {
-        if (millis()-pressTimer > 30) {
+        if (millis()-pressTimer > DEBOUNCE_TIME) {
           longPressTimer = millis();
           isActivated    = true;  // Button now can register a real press
         }
       }
 
       /*
-        If it has been over 300ms since button was
+        If it has been over a certain ms since button was
         pressed down, then activate a long press 
         action.
       */
       else {
-        if (millis()-longPressTimer > 300) {
+        if (millis()-longPressTimer > LONGPRESS_TIME) {
           if (!isLongActivated) {
             isLongActivated = true;
             sendLongPress   = true;
