@@ -7,5 +7,7 @@
 #define MENU_HIPBOX        3
 #define MENU_CHANGE_SNAP   4
 #define MENU_CHANGE_PRESET 5
+#define MENU_EXTEND_HIPBOX 6
+#define MENU_RESET         7
 
 #endif
