@@ -101,6 +101,7 @@ struct Preset {
     for (int i=0; i<3; i++) {
       snapshots[i].reset();
     }
+    snapshotNum = 0;
   }
 
   void send() {
