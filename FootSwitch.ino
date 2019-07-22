@@ -196,7 +196,7 @@ void loop() {
         if (rsw.isPressed) {
           jumpTo(MENU_RESET);
         }
-        if (lsw.isLongPressed || csw.isLongPressed || rsw.isLongPressed) {
+        if (rsw.isLongPressed) {
           jumpTo(MENU_MAIN);
         }
       }
@@ -259,8 +259,8 @@ void loop() {
     case MENU_CHANGE_PRESET:
       if (!initialize) {
         led1.set(255,135,0, 200);
-        led2.set(255,135,0, 200);
-        led3.set(  0,  0,0, 200);
+        led2.set(  0,  0,0, 200);
+        led3.set(255,135,0, 200);
         initialize = true;
       }
       else {
@@ -269,11 +269,11 @@ void loop() {
           led1.blink(2, 50);
         }
         if (csw.isPressed) {
-          preset.nextPreset();
-          led2.blink(2, 50);
+          jumpTo(MENU_MAIN);
         }
         if (rsw.isPressed) {
-          preset.setPreset(0);
+          preset.nextPreset();
+          led3.blink(2, 50);
         }
 
         if (lsw.isLongPressed) {
@@ -281,11 +281,13 @@ void loop() {
           led1.blink(2, 100);
         }
         if (csw.isLongPressed) {
-          preset.setPreset(preset.presetNum < 105 ? preset.presetNum+20 : 125);
-          led2.blink(2, 100);
+          preset.setPreset(0);
+          led1.blink(2, 100);
+          led3.blink(2, 100);
         }
         if (rsw.isLongPressed) {
-          jumpTo(MENU_MAIN);
+          preset.setPreset(preset.presetNum < 105 ? preset.presetNum+20 : 125);
+          led3.blink(2, 100);
         }
       }
       break;
