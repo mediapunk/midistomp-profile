@@ -90,9 +90,9 @@ void loop() {
         initialize = true;
       } else {
         if (timer >= intro_t+1300) {
-          led1.set(0,0,0, 1000);
-          led2.set(0,0,0, 1000);
-          led3.set(0,0,0, 1000);
+          led1.set(0,  0,  0,  1000);
+          led2.set(0,  0,  0,  1000);
+          led3.set(50, 50, 50, 1000);
 
           intro_t = timer;
           jumpTo(MENU_MAIN);
@@ -102,9 +102,9 @@ void loop() {
 
     case MENU_MAIN:
       if (!initialize && timer >= intro_t+1000) {
-        led1.set(snap_p->fs4.get() ? 255 : 0,0,0, 200);
-        led2.set(snap_p->fs5.get() ? 255 : 0,0,0, 200);
-        led3.set(snap_p->fs6.get() ? 255 : 0,0,0, 200);
+        led1.set(snap_p->fs4.get() ? 255 : 0,  0,  0,  200);
+        led2.set(snap_p->fs5.get() ? 255 : 0,  0,  0,  200);
+        led3.set(                          50, 50, 50, 200);
         initialize = true;
       } else {
         if (lsw.isPressed) {
@@ -115,90 +115,96 @@ void loop() {
           snap_p->fs5.toggle();
           led2.set(snap_p->fs5.get() ? 255 : 0,0,0, 50);
         }
-        if (rsw.isPressed) {
-          snap_p->fs6.toggle();
-          led3.set(snap_p->fs6.get() ? 255 : 0,0,0, 50);
-        }
+        if (rsw.isPressed) jumpTo(MENU_SUB);
 
-        if (lsw.isLongPressed) jumpTo(MENU_HIPBOX);
-        if (csw.isLongPressed) jumpTo(MENU_CHANGE_SNAP);
-        if (rsw.isLongPressed) jumpTo(MENU_CHANGE_PRESET);
+        if (lsw.isLongPressed) {
+          // Talkback on/off
+          sendMidi(MIDI_NOTE_ON, 0, 127);
+          led1.set(255,255,255,0);
+          initialize = false;
+        }
+        if (csw.isLongPressed) {
+          // Record On
+          sendMidi(MIDI_NOTE_ON, 1, 127);
+          if (snap_p->fs5.get()) {
+            led2.blink(2, 50);
+          }
+          else {
+            led2.set(255,0,0,0);
+            initialize = false;
+          }
+        }
+        if (rsw.isLongPressed) {
+          // Stop All
+          sendMidi(MIDI_NOTE_ON, 2, 127);
+          led3.blink(2, 50);
+        }
       }
       break;
 
-    /* The '60' in this section caps the available
-       midi notes to 120.  There are only a possible 127
-       notes to send, and 3 are taken up already by 
-       the talkback, stop-all, and record buttons. */
-    case MENU_HIPBOX:
+    case MENU_SUB:
+      if (!initialize) {
+        led1.set(50,  50,  50, 200);
+        led3.set(255, 135, 0,  200);
+        if (preset.presetNum > 60) {
+          led2.set(50,0,0, 200);
+        }
+        else {
+          led2.set(255,20,0, 200);
+        }
+        initialize = true;
+      }
+      else {
+        if (lsw.isPressed) jumpTo(MENU_SUB_2);
+        if (preset.presetNum <= 60) {
+          if (csw.isPressed) {
+            // Start/Stop Metronome
+            sendMidi(MIDI_NOTE_ON, (preset.presetNum*2)+4, 127);
+            /*doesnt show up anyway because of the jumpTo*/
+            /*led2.blink(2, 50);*/
+            jumpTo(MENU_MAIN);
+          }
+        }
+        if (rsw.isPressed) jumpTo(MENU_CHANGE_PRESET);
+
+        /*if (lsw.isLongPressed) {}*/
+        /*if (csw.isLongPressed) {}*/
+        if (rsw.isLongPressed) jumpTo(MENU_MAIN);
+      }
+      break;
+
+    case MENU_SUB_2:
       if (!initialize) {
         if (preset.presetNum > 60) {
           led1.set(50,0,0, 200);
-          led2.set(50,0,0, 200);
-          led3.set(50,0,0, 200);
         }
         else {
-          led1.set(255,50,0, 200);
-          led2.set(255,20,0, 200);
-          led3.set(255, 0,0, 200);
+          led1.set(255,20,0, 200);
         }
+        led2.set(255, 0, 0,   200);
+        led3.set(255, 0, 255, 200);
         initialize = true;
       }
       else {
         if (preset.presetNum <= 60) {
           if (lsw.isPressed) {
             // Start/Stop Back Tracks
-            sendMidi(MIDI_NOTE_ON, (preset.presetNum*2)+3, 127);
-            led1.blink(2, 50);
+            sendMidi(MIDI_NOTE_ON, (preset.presetNum*2)+5, 127);
+            /*led1.blink(2, 50);*/
+            jumpTo(MENU_MAIN);
           }
-          if (csw.isPressed) {
-            // Start/Stop Metronome
-            sendMidi(MIDI_NOTE_ON, (preset.presetNum*2)+4, 127);
-            led2.blink(2, 50);
-          }
-          if (rsw.isPressed) {
-            // Stop All
-            sendMidi(MIDI_NOTE_ON, 2, 127);
-            led3.blink(2, 50);
-          }
-        }
-        if (lsw.isLongPressed) {
-          // Talkback on/off
-          sendMidi(MIDI_NOTE_ON, 0, 127);
-          led1.blink(2, 100);
-        }
-        if (csw.isLongPressed) {
-          jumpTo(MENU_EXTEND_HIPBOX);
-        }
-        if (rsw.isLongPressed) {
-          jumpTo(MENU_MAIN);
-        }
-      }
-      break;
-
-    case MENU_EXTEND_HIPBOX:
-      if (!initialize) {
-        led1.set(255,255,255, 200);
-        led2.set(255,  0,  0, 200);
-        led3.set(255,  0,255, 200);
-        initialize = true;
-      } else {
-        if (lsw.isPressed) {
-          // Talkback on/off
-          sendMidi(MIDI_NOTE_ON, 0, 127);
-          led1.blink(2, 50);
         }
         if (csw.isPressed) {
-          // Record On
-          sendMidi(MIDI_NOTE_ON, 1, 127);
-          led2.blink(2, 50);
-        }
-        if (rsw.isPressed) {
-          jumpTo(MENU_RESET);
-        }
-        if (rsw.isLongPressed) {
+          // Record Stop
+          sendMidi(MIDI_NOTE_ON, 3, 127);
+          /*led2.blink(2, 50);*/
           jumpTo(MENU_MAIN);
         }
+        if (rsw.isPressed) jumpTo(MENU_RESET);
+
+        /*if (lsw.isLongPressed) {}*/
+        /*if (csw.isLongPressed) {}*/
+        if (rsw.isLongPressed) jumpTo(MENU_MAIN);
       }
       break;
 
@@ -211,44 +217,6 @@ void loop() {
       } else {
         if (lsw.isPressed) {
           jumpTo(MENU_INTRO);
-        }
-        if (rsw.isLongPressed) {
-          jumpTo(MENU_MAIN);
-        }
-      }
-      break;
-
-    case MENU_CHANGE_SNAP:
-      if (!initialize) {
-        if (preset.snapshotNum == 0) led1.set(255,255,255,200);
-        else                         led1.set(  0,  0,  0,200);
-        if (preset.snapshotNum == 1) led2.set(255,255,255,200);
-        else                         led2.set(  0,  0,  0,200);
-        if (preset.snapshotNum == 2) led3.set(255,255,255,200);
-        else                         led3.set(  0,  0,  0,200);
-        initialize = true;
-      }
-      else {
-        if (lsw.isPressed) {
-          if (preset.snapshotNum == 0) jumpTo(MENU_MAIN);
-          else {
-            preset.setSnapshot(0);
-            jumpTo(MENU_MAIN);
-          }
-        }
-        if (csw.isPressed) {
-          if (preset.snapshotNum == 1) jumpTo(MENU_MAIN);
-          else {
-            preset.setSnapshot(1);
-            jumpTo(MENU_MAIN);
-          }
-        }
-        if (rsw.isPressed) {
-          if (preset.snapshotNum == 2) jumpTo(MENU_MAIN);
-          else {
-            preset.setSnapshot(2);
-            jumpTo(MENU_MAIN);
-          }
         }
         if (rsw.isLongPressed) {
           jumpTo(MENU_MAIN);
