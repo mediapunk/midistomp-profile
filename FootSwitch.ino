@@ -210,13 +210,16 @@ void loop() {
 
     case MENU_RESET:
       if (!initialize) {
-        led1.set(255,0,255, 200);
-        led2.set(0,  0,  0, 200);
-        led3.set(0,  0,  0, 200);
+        led1.set(255, 0,255, 200);
+        led2.set(255,20,  0, 200);
+        led3.set(  0, 0,  0, 200);
         initialize = true;
       } else {
         if (lsw.isPressed) {
           jumpTo(MENU_INTRO);
+        }
+        if (csw.isPressed) {
+          jumpTo(MENU_MIDI_ONLY);
         }
         if (rsw.isLongPressed) {
           jumpTo(MENU_MAIN);
@@ -256,6 +259,46 @@ void loop() {
         if (rsw.isLongPressed) {
           preset.setPreset(preset.presetNum < 105 ? preset.presetNum+20 : 125);
           led3.blink(2, 100);
+        }
+      }
+      break;
+
+    case MENU_MIDI_ONLY:
+      if (!initialize) {
+        led1.set(255,20,0, 200);
+        led2.set(255,20,0, 200);
+        led3.set(255,20,0, 200);
+        initialize = true;
+      }
+      else {
+        if (lsw.isPressed) {
+          sendMidi(MIDI_CC, 1, 127);
+          sendMidi(MIDI_CC, 1, 0);
+          led1.blink(2, 50);
+        }
+        if (csw.isPressed) {
+          sendMidi(MIDI_CC, 2, 127);
+          sendMidi(MIDI_CC, 2, 0);
+          led2.blink(2, 50);
+        }
+        if (rsw.isPressed) {
+          sendMidi(MIDI_CC, 3, 127);
+          sendMidi(MIDI_CC, 3, 0);
+          led3.blink(2, 50);
+        }
+
+        if (lsw.isLongPressed) {
+          sendMidi(MIDI_CC, 4, 127);
+          sendMidi(MIDI_CC, 4, 0);
+          led1.blink(2, 100);
+        }
+        if (csw.isLongPressed) {
+          sendMidi(MIDI_CC, 5, 127);
+          sendMidi(MIDI_CC, 5, 0);
+          led2.blink(2, 100);
+        }
+        if (rsw.isLongPressed) {
+          jumpTo(MENU_RESET);
         }
       }
       break;

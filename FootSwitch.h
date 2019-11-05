@@ -8,5 +8,6 @@
 #define MENU_CHANGE_PRESET   4
 #define MENU_SUB_2           5
 #define MENU_RESET           6
+#define MENU_MIDI_ONLY       7
 
 #endif
